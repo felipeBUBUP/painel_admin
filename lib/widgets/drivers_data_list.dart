@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:admin_web_panel/methods/common_methods.dart';
+import '../pages/driver_details.dart';
 
 class DriversDataList extends StatefulWidget {
+  final String searchQuery;
   final Function(String) onMoreInfoTap;
 
-  const DriversDataList({required this.onMoreInfoTap, super.key});
+  const DriversDataList({
+    required this.searchQuery,
+    required this.onMoreInfoTap,
+    super.key,
+  });
 
   @override
   State<DriversDataList> createState() => _DriversDataListState();
@@ -45,30 +51,33 @@ class _DriversDataListState extends State<DriversDataList> {
           );
         }
 
-        Map dataMap = snapshotData.data!.snapshot.value as Map;
-        List itemsList = [];
+        Map<dynamic, dynamic> dataMap = snapshotData.data!.snapshot.value as Map<dynamic, dynamic>;
+        List<Map<String, dynamic>> itemsList = [];
         dataMap.forEach((key, value) {
-          itemsList.add({"key": key, ...value});
+          Map<String, dynamic> item = Map<String, dynamic>.from(value);
+          itemsList.add({"key": key, ...item});
         });
+
+        List<Map<String, dynamic>> filteredList = _applyFilters(itemsList);
 
         return ListView.builder(
           shrinkWrap: true,
-          itemCount: itemsList.length,
+          itemCount: filteredList.length,
           itemBuilder: ((context, index) {
             return Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 cMethods.data(
                   2,
-                  Text(itemsList[index]["id"].toString(),
+                  Text(filteredList[index]["id"].toString(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
                 ),
                 cMethods.data(
                   1,
-                  itemsList[index]["photo"] != null
+                  filteredList[index]["photo"] != null
                       ? Image.network(
-                    itemsList[index]["photo"].toString(),
+                    filteredList[index]["photo"].toString(),
                     width: 50,
                     height: 50,
                     errorBuilder: (context, error, stackTrace) {
@@ -79,41 +88,40 @@ class _DriversDataListState extends State<DriversDataList> {
                 ),
                 cMethods.data(
                   1,
-                  Text(itemsList[index]["name"].toString(),
+                  Text(filteredList[index]["name"].toString(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
                 ),
                 cMethods.data(
                   1,
                   Text(
-                      itemsList[index]["car_details"]["carModel"].toString() +
+                      (filteredList[index]["car_details"] != null ? filteredList[index]["car_details"]["carModel"].toString() : "No model") +
                           " - " +
-                          itemsList[index]["car_details"]["carNumber"]
-                              .toString(),
+                          (filteredList[index]["car_details"] != null ? filteredList[index]["car_details"]["carNumber"].toString() : "No number"),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
                 ),
                 cMethods.data(
                   1,
-                  Text(itemsList[index]["phone"].toString(),
+                  Text(filteredList[index]["phone"].toString(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
                 ),
                 cMethods.data(
                   1,
-                  itemsList[index]["earnings"] != null
-                      ? Text("\$ " + itemsList[index]["earnings"].toString())
+                  filteredList[index]["earnings"] != null
+                      ? Text("\$ " + filteredList[index]["earnings"].toString())
                       : const Text("\$ 0"),
                 ),
                 cMethods.data(
                   1,
-                  itemsList[index]["blockStatus"] == "no"
+                  filteredList[index]["blockStatus"] == "no"
                       ? ElevatedButton(
                     onPressed: () async {
                       await FirebaseDatabase.instance
                           .ref()
                           .child("drivers")
-                          .child(itemsList[index]["id"])
+                          .child(filteredList[index]["id"])
                           .update(
                         {
                           "blockStatus": "yes",
@@ -133,7 +141,7 @@ class _DriversDataListState extends State<DriversDataList> {
                       await FirebaseDatabase.instance
                           .ref()
                           .child("drivers")
-                          .child(itemsList[index]["id"])
+                          .child(filteredList[index]["id"])
                           .update(
                         {
                           "blockStatus": "no",
@@ -153,7 +161,12 @@ class _DriversDataListState extends State<DriversDataList> {
                   1,
                   ElevatedButton(
                     onPressed: () {
-                      widget.onMoreInfoTap(itemsList[index]["id"]);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DriverDetailsPage(driverId: filteredList[index]["id"]),
+                        ),
+                      );
                     },
                     child: const Text(
                       "Mais Informações",
@@ -170,5 +183,15 @@ class _DriversDataListState extends State<DriversDataList> {
         );
       },
     );
+  }
+
+  List<Map<String, dynamic>> _applyFilters(List<Map<String, dynamic>> itemsList) {
+    return itemsList.where((item) {
+      bool matchesQuery = widget.searchQuery.isEmpty ||
+          (item["name"] != null && item["name"].toString().toLowerCase().contains(widget.searchQuery.toLowerCase())) ||
+          (item["car_details"] != null && item["car_details"]["carModel"] != null && item["car_details"]["carModel"].toString().toLowerCase().contains(widget.searchQuery.toLowerCase())) ||
+          (item["phone"] != null && item["phone"].toString().toLowerCase().contains(widget.searchQuery.toLowerCase()));
+      return matchesQuery;
+    }).toList();
   }
 }

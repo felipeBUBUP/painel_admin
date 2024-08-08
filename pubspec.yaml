@@ -43,7 +43,8 @@ dependencies:
   printing:
   firebase_storage:
   path_provider:
-
+  intl:
+  fl_chart:
 dev_dependencies:
   flutter_test:
     sdk: flutter

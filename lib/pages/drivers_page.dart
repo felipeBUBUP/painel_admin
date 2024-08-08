@@ -1,10 +1,6 @@
-import 'package:admin_web_panel/methods/common_methods.dart';
-import 'package:admin_web_panel/widgets/drivers_data_list.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_database/firebase_database.dart';
-import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
+import '../methods/common_methods.dart';
+import '../widgets/drivers_data_list.dart';
 
 class DriversPage extends StatefulWidget {
   static const String id = "\webPageDrivers";
@@ -17,145 +13,111 @@ class DriversPage extends StatefulWidget {
 
 class _DriversPageState extends State<DriversPage> {
   CommonMethods cMethods = CommonMethods();
+  String searchQuery = "";
+
+  final TextEditingController searchController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text("Gerenciar Motoristas"),
+        backgroundColor: const Color(0xFF003319), // Verde Escuro
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                alignment: Alignment.topLeft,
-                child: const Text(
-                  "Manage Drivers",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              alignment: Alignment.topLeft,
+              child: const Text(
+                "Gerenciar Motoristas",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF003319), // Verde Escuro
                 ),
               ),
-              const SizedBox(
-                height: 18,
+            ),
+            const SizedBox(
+              height: 18,
+            ),
+            _buildSearchField(),
+            const SizedBox(
+              height: 18,
+            ),
+            Row(
+              children: [
+                cMethods.header(2, "ID MOTORISTA"),
+                cMethods.header(1, "FOTO"),
+                cMethods.header(1, "NOME"),
+                cMethods.header(1, "CARRO"),
+                cMethods.header(1, "TELEFONE"),
+                cMethods.header(1, "GANHOS"),
+                cMethods.header(1, "STATUS"),
+                cMethods.header(1, "DETALHES"),
+              ],
+            ),
+            const Divider(color: Color(0xFF003319)), // Verde Escuro
+            Expanded(
+              child: DriversDataList(
+                searchQuery: searchQuery,
+                onMoreInfoTap: (String driverId) {
+                  // Handle more info tap
+                },
               ),
-              Row(
-                children: [
-                  cMethods.header(2, "ID MOTORISTA"),
-                  cMethods.header(1, "FOTO"),
-                  cMethods.header(1, "NOME"),
-                  cMethods.header(1, "CARRO"),
-                  cMethods.header(1, "TELEFONE"),
-                  cMethods.header(1, "RECEBIDO"),
-                  cMethods.header(1, "AÇÃO"),
-                  cMethods.header(1, "MAIS INFORMAÇÕES"), // Nova coluna
-                ],
-              ),
-              // display data
-              DriversDataList(onMoreInfoTap: showDriverDetails), // Passe a função de callback
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  void showDriverDetails(String driverId) {
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return DriverDetails(driverId: driverId);
-      },
-    );
-  }
-}
-
-class DriverDetails extends StatelessWidget {
-  final String driverId;
-
-  const DriverDetails({required this.driverId});
-
-  @override
-  Widget build(BuildContext context) {
-    final DatabaseReference driverRef = FirebaseDatabase.instance.ref().child("drivers").child(driverId);
-
-    return FutureBuilder(
-      future: driverRef.get(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return const Center(child: Text("Error loading data"));
-        }
-
-        if (!snapshot.hasData || !snapshot.data!.exists) {
-          return const Center(child: Text("No data found"));
-        }
-
-        Map driverData = snapshot.data!.value as Map;
-        Map<String, String> documentUrls = {
-          'Negativa Antecedentes Federal': driverData['documents']['negativa_antecedentes_federal'] ?? '',
-          'Negativa Antecedentes Estadual': driverData['documents']['negativa_antecedentes_estadual'] ?? '',
-          'Negativa Antecedentes Militar': driverData['documents']['negativa_antecedentes_militar'] ?? '',
-          'CNH': driverData['documents']['cnh'] ?? '',
-          'RG': driverData['documents']['rg'] ?? '',
-          'Toxicológico': driverData['documents']['toxicologico'] ?? '',
-          'Foto da Frente': driverData['car_details']['images']['frente'] ?? '',
-          'Foto da Traseira': driverData['car_details']['images']['traseira'] ?? '',
-          'Foto Lateral Direita': driverData['car_details']['images']['lateral_direita'] ?? '',
-          'Foto Lateral Esquerda': driverData['car_details']['images']['lateral_esquerda'] ?? '',
-          'Foto do Chassi': driverData['car_details']['images']['chassi'] ?? '',
-          'Foto dos Pneus': driverData['car_details']['images']['pneus'] ?? '',
-        };
-
-
-
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Detalhes do Motorista', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
-                ...documentUrls.entries.map((entry) {
-                  return ListTile(
-                    title: Text(entry.key),
-                    trailing: IconButton(
-                      icon: Icon(Icons.download),
-                      onPressed: entry.value.isNotEmpty
-                          ? () async {
-                        await downloadFile(context, entry.value, entry.key);
-                      }
-                          : null,
-                    ),
-                  );
-                }).toList(),
-              ],
-            ),
+  Widget _buildSearchField() {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: searchController,
+                  decoration: const InputDecoration(
+                    labelText: 'Buscar por nome, modelo do carro ou telefone',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      searchQuery = value;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    searchQuery = "";
+                    searchController.clear();
+                  });
+                },
+                icon: const Icon(Icons.clear),
+                label: const Text('Limpar Busca'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
-  }
-
-  Future<void> downloadFile(BuildContext context, String url, String fileName) async {
-    try {
-      var response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        var documentDirectory = await getApplicationDocumentsDirectory();
-        File file = File('${documentDirectory.path}/$fileName');
-
-        file.writeAsBytesSync(response.bodyBytes);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Arquivo $fileName baixado com sucesso!")));
-      } else {
-        throw Exception('Failed to load file');
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro ao baixar o arquivo $fileName")));
-    }
   }
 }

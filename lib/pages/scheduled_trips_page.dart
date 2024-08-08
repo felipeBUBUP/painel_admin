@@ -41,6 +41,9 @@ class _ScheduledTripsPageState extends State<ScheduledTripsPage> {
         cMethods.data(
           1,
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              foregroundColor: const Color(0xFFF2F2F2), backgroundColor: const Color(0xFF003319), // Branco
+            ),
             onPressed: () => navigateToTripDetails(item),
             child: const Text("+"),
           ),
@@ -51,7 +54,7 @@ class _ScheduledTripsPageState extends State<ScheduledTripsPage> {
 
   Widget buildTripsList(AsyncSnapshot snapshot, String status) {
     if (snapshot.hasError) {
-      return const Center(child: Text("Error loading data"));
+      return const Center(child: Text("Erro ao carregar os dados"));
     }
 
     if (snapshot.connectionState == ConnectionState.waiting) {
@@ -59,7 +62,7 @@ class _ScheduledTripsPageState extends State<ScheduledTripsPage> {
     }
 
     if (snapshot.data?.snapshot.value == null) {
-      return const Center(child: Text("No trips found."));
+      return const Center(child: Text("Nenhuma viagem encontrada."));
     }
 
     Map dataMap = snapshot.data.snapshot.value as Map;
@@ -93,26 +96,28 @@ class _ScheduledTripsPageState extends State<ScheduledTripsPage> {
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
+                    color: Color(0xFF003319), // Verde Escuro
                   ),
                 ),
               ),
               const SizedBox(height: 18),
               Row(
                 children: [
-                  cMethods.header(2, "ID VIAGEM"),
-                  cMethods.header(1, "USUÁRIO"),
-                  cMethods.header(1, "PARTIDA"),
-                  cMethods.header(1, "DESTINO"),
-                  cMethods.header(1, "DATA"),
-                  cMethods.header(1, "TIPO"),
-                  cMethods.header(1, "STATUS"),
-                  cMethods.header(1, "DETALHES"),
+                  headerWithColor(2, "ID VIAGEM", const Color(0xFF003319)), // Verde Escuro
+                  headerWithColor(1, "USUÁRIO", const Color(0xFF003319)), // Verde Escuro
+                  headerWithColor(1, "PARTIDA", const Color(0xFF003319)), // Verde Escuro
+                  headerWithColor(1, "DESTINO", const Color(0xFF003319)), // Verde Escuro
+                  headerWithColor(1, "DATA", const Color(0xFF003319)), // Verde Escuro
+                  headerWithColor(1, "TIPO", const Color(0xFF003319)), // Verde Escuro
+                  headerWithColor(1, "STATUS", const Color(0xFF003319)), // Verde Escuro
+                  headerWithColor(1, "DETALHES", const Color(0xFF003319)), // Verde Escuro
                 ],
               ),
+              const Divider(color: Color(0xFF003319)), // Verde Escuro
               const SizedBox(height: 18),
               const Text(
                 "Viagens Agendadas",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF003319)), // Verde Escuro
               ),
               StreamBuilder(
                 stream: scheduledTripsRef.onValue,
@@ -123,7 +128,7 @@ class _ScheduledTripsPageState extends State<ScheduledTripsPage> {
               const SizedBox(height: 18),
               const Text(
                 "Viagens Concluídas",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF003319)), // Verde Escuro
               ),
               StreamBuilder(
                 stream: completedTripsRef.onValue,
@@ -132,6 +137,22 @@ class _ScheduledTripsPageState extends State<ScheduledTripsPage> {
                 },
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget headerWithColor(int flex, String title, Color color) {
+    return Expanded(
+      flex: flex,
+      child: Container(
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: color,
           ),
         ),
       ),
