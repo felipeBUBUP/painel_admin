@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:url_launcher/url_launcher.dart'; // Import necessário para abrir URLs
+import 'package:url_launcher/url_launcher.dart';
 
 class DriverDetailsPage extends StatefulWidget {
   final String driverId;
@@ -18,52 +18,33 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
   List<double> lastFiveWeeksEarnings = List.filled(5, 0.0);
   List<FlSpot> lineChartData = [];
   List<String> weekDates = [];
+  List<Map<String, dynamic>> recentTrips = [];
 
   @override
   void initState() {
     super.initState();
     driverRef = FirebaseDatabase.instance.ref().child("drivers").child(widget.driverId);
     getTotalEarningsOfDriver();
+    getRecentTrips();
   }
 
-  getTotalEarningsOfDriver() async {
-    DatabaseReference driverEarningsRef = driverRef.child("earnings");
+  getRecentTrips() async {
+    DatabaseReference tripsRef = FirebaseDatabase.instance.ref().child("tripRequests");
 
-    driverEarningsRef.onValue.listen((event) {
+    tripsRef.orderByChild("date").limitToLast(5).onValue.listen((event) {
       if (event.snapshot.value != null) {
-        Map earningsMap = event.snapshot.value as Map;
-
-        DateTime now = DateTime.now();
-        DateTime currentWeekStart = now.subtract(Duration(days: now.weekday - 1));
-        DateTime fiveWeeksAgo = currentWeekStart.subtract(Duration(days: 35));
-
-        Map<int, double> weeklyEarnings = {
-          for (var i = 0; i < 6; i++) i: 0.0,
-        };
-
-        earningsMap.forEach((key, value) {
-          double amount = value['amount'];
-          DateTime earningDate = DateTime.fromMillisecondsSinceEpoch(int.parse(key));
-          if (earningDate.isAfter(fiveWeeksAgo)) {
-            int weekNumber = ((currentWeekStart.difference(earningDate).inDays) / 7).floor();
-            if (weekNumber < 6) {
-              weeklyEarnings[weekNumber] = weeklyEarnings[weekNumber]! + amount;
-            }
+        Map tripsMap = event.snapshot.value as Map;
+        List<Map<String, dynamic>> tripsList = [];
+        tripsMap.forEach((key, value) {
+          if (value["status"] == "ended" && value["driverID"] == widget.driverId) {
+            Map<String, dynamic> trip = Map<String, dynamic>.from(value);
+            trip['key'] = key;
+            tripsList.add(trip);
           }
         });
 
         setState(() {
-          currentWeekEarnings = weeklyEarnings[0]!;
-          lastFiveWeeksEarnings = List.generate(5, (index) => weeklyEarnings[index + 1]!);
-          weekDates = List.generate(6, (index) {
-            DateTime weekStart = currentWeekStart.subtract(Duration(days: index * 7));
-            DateTime weekEnd = weekStart.add(Duration(days: 6));
-            return "${weekStart.day}/${weekStart.month} - ${weekEnd.day}/${weekEnd.month}";
-          });
-
-          lineChartData = List.generate(6, (index) {
-            return FlSpot(index.toDouble(), weeklyEarnings[index]!);
-          });
+          recentTrips = tripsList.reversed.toList();
         });
       }
     });
@@ -125,6 +106,8 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
                   ]),
                   const SizedBox(height: 20),
                   _buildEarningsDashboard(),
+                  const SizedBox(height: 20),
+                  _buildRecentTrips(),
                   const SizedBox(height: 20),
                   _buildInfoSection("Fotos", _buildPhotoWidgets(driverData['car_details'])),
                   const SizedBox(height: 20),
@@ -241,6 +224,62 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
     );
   }
 
+  getTotalEarningsOfDriver() async {
+    DatabaseReference driverEarningsRef = driverRef.child("earnings");
+
+    driverEarningsRef.onValue.listen((event) {
+      if (event.snapshot.value != null) {
+        Map earningsMap = event.snapshot.value as Map;
+
+        // Calcula a última segunda-feira de 6 semanas atrás
+        DateTime now = DateTime.now();
+        DateTime lastMonday = now.subtract(Duration(days: now.weekday - 1)); // Última segunda-feira
+        DateTime referenceDate = lastMonday.subtract(Duration(days: 35)); // 6 semanas atrás
+
+        Map<int, double> weeklyEarnings = {
+          for (var i = 0; i < 6; i++) i: 0.0,
+        };
+
+        earningsMap.forEach((key, value) {
+          double? amount = value['amount'] != null ? double.tryParse(value['amount'].toString()) : null;
+          DateTime? earningDate = value['timestamp'] != null
+              ? DateTime.fromMillisecondsSinceEpoch(int.tryParse(value['timestamp'].toString()) ?? 0)
+              : null;
+
+          if (amount != null && earningDate != null) {
+            // Calcula o número da semana baseado na referenceDate
+            int weekNumber = (earningDate.difference(referenceDate).inDays ~/ 7);
+
+            if (weekNumber >= 0 && weekNumber < 6) {
+              weeklyEarnings[weekNumber] = (weeklyEarnings[weekNumber] ?? 0.0) + amount;
+              print("Processing earning: date=$earningDate, amount=$amount, weekNumber=$weekNumber");
+            } else {
+              print("Earning out of range: date=$earningDate, amount=$amount, weekNumber=$weekNumber");
+            }
+          }
+        });
+
+        setState(() {
+          currentWeekEarnings = weeklyEarnings[0] ?? 0.0;
+          lastFiveWeeksEarnings = List.generate(5, (index) => weeklyEarnings[index + 1] ?? 0.0);
+          weekDates = List.generate(6, (index) {
+            DateTime weekStart = referenceDate.add(Duration(days: index * 7));
+            DateTime weekEnd = weekStart.add(Duration(days: 6));
+            return "${weekStart.day}/${weekStart.month} - ${weekEnd.day}/${weekEnd.month}";
+          });
+
+          lineChartData = List.generate(6, (index) {
+            return FlSpot(index.toDouble(), weeklyEarnings[index] ?? 0.0);
+          });
+        });
+      }
+    });
+  }
+
+
+
+
+
   Widget _buildEarningsDashboard() {
     double maxYValue = lineChartData.isNotEmpty
         ? (lineChartData.map((spot) => spot.y).reduce((a, b) => a > b ? a : b).ceilToDouble() + 10).ceilToDouble()
@@ -248,7 +287,7 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
 
     maxYValue = maxYValue % 10 == 0 ? maxYValue : (maxYValue + (10 - maxYValue % 10)).ceilToDouble();
 
-    return _buildInfoSection("Últimas Ganhos", [
+    return _buildInfoSection("Últimos Ganhos", [
       Container(
         decoration: BoxDecoration(
           color: const Color(0xFF0C1F0E), // Verde Escuro
@@ -268,7 +307,7 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
             ),
             const SizedBox(height: 10),
             Text(
-              "\$ ${currentWeekEarnings.toStringAsFixed(2)}",
+              "\$ ${(currentWeekEarnings ?? 0.0).toStringAsFixed(2)}",  // Certifique-se de que `currentWeekEarnings` não seja nulo.
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 30,
@@ -303,12 +342,12 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
           itemCount: lastFiveWeeksEarnings.length,
           itemBuilder: (context, index) {
             return Container(
-              width: 150, // Largura reduzida
+              width: 180, // Largura reduzida
               margin: const EdgeInsets.symmetric(horizontal: 5),
               decoration: BoxDecoration(
                 color: const Color(0xFF0C1F0E), // Verde Escuro
                 borderRadius: BorderRadius.circular(10),
-                boxShadow: [
+                boxShadow: const [
                   BoxShadow(
                     color: Colors.black26,
                     blurRadius: 5,
@@ -331,7 +370,7 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      "\$${lastFiveWeeksEarnings[index].toStringAsFixed(2)}",
+                      "\$${(index < lastFiveWeeksEarnings.length ? lastFiveWeeksEarnings[index] : 0.0).toStringAsFixed(2)}",  // Certifique-se de que o valor seja numérico.
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -401,6 +440,7 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
                 sideTitles: SideTitles(
                   showTitles: true,
                   reservedSize: 80,
+                  interval: 1,  // Adicione esta linha para garantir que o título apareça apenas uma vez por semana
                   getTitlesWidget: (value, meta) {
                     final weekIndex = value.toInt();
                     if (weekIndex >= 0 && weekIndex < 6) {
@@ -408,7 +448,7 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
                         axisSide: meta.axisSide,
                         space: 15,
                         child: Transform.translate(
-                          offset: const Offset(0, 15), // Mover a legenda para baixo
+                          offset: const Offset(0, 15),
                           child: Transform.rotate(
                             angle: -0.7854,
                             child: Text(
@@ -433,12 +473,12 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
               LineChartBarData(
                 spots: lineChartData,
                 isCurved: false,
-                color: Colors.blue,
+                color: const Color.fromRGBO(185, 150, 100, 1),
                 barWidth: 3,
                 dotData: FlDotData(show: true),
                 belowBarData: BarAreaData(
                   show: true,
-                  color: Colors.blue.withOpacity(0.3),
+                  color: const Color.fromRGBO(185, 150, 100, 1).withOpacity(0.3),
                 ),
               ),
             ],
@@ -448,6 +488,75 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
           ),
         ),
       ),
+    ]);
+  }
+
+
+
+  Widget _buildRecentTrips() {
+    return _buildInfoSection("Histórico de Viagens", [
+      Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF0C1F0E), // Verde Escuro
+          borderRadius: BorderRadius.circular(10),
+        ),
+        width: double.infinity,
+        padding: const EdgeInsets.all(18.0),
+        child: Column(
+          children: recentTrips.isEmpty
+              ? [
+            const Center(
+              child: Text(
+                "Nenhuma viagem recente",
+                style: TextStyle(
+                  color: Color(0xFFF2E8D0), // Bege
+                  fontSize: 18,
+                ),
+              ),
+            ),
+          ]
+              : recentTrips.map((trip) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      trip["pickUpAddress"] ?? "N/A",
+                      style: const TextStyle(
+                        color: Color(0xFFF2E8D0), // Bege
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 7,
+                    child: Text(
+                      trip["dropOffAddress"] ?? "N/A",
+                      style: const TextStyle(
+                        color: Color(0xFFF2E8D0), // Bege
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      "\$${(trip["fareAmount"] != null ? double.parse(trip["fareAmount"].toString()).toStringAsFixed(2) : '0.00')}",
+                      style: const TextStyle(
+                        color: Colors.greenAccent,
+                        fontSize: 14,
+                      ),
+                    ),
+                  )
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+      const SizedBox(height: 10),
     ]);
   }
 
@@ -536,11 +645,4 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
       throw 'Could not launch $url';
     }
   }
-}
-
-class WeeklyEarnings {
-  final String week;
-  final double amount;
-
-  WeeklyEarnings(this.week, this.amount);
 }

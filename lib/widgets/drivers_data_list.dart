@@ -75,29 +75,7 @@ class _DriversDataListState extends State<DriversDataList> {
                 ),
                 cMethods.data(
                   1,
-                  filteredList[index]["photo"] != null
-                      ? Image.network(
-                    filteredList[index]["photo"].toString(),
-                    width: 50,
-                    height: 50,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.error);
-                    },
-                  )
-                      : const Text("No photo"),
-                ),
-                cMethods.data(
-                  1,
                   Text(filteredList[index]["name"].toString(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                ),
-                cMethods.data(
-                  1,
-                  Text(
-                      (filteredList[index]["car_details"] != null ? filteredList[index]["car_details"]["carModel"].toString() : "No model") +
-                          " - " +
-                          (filteredList[index]["car_details"] != null ? filteredList[index]["car_details"]["carNumber"].toString() : "No number"),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
                 ),
@@ -109,9 +87,13 @@ class _DriversDataListState extends State<DriversDataList> {
                 ),
                 cMethods.data(
                   1,
-                  filteredList[index]["earnings"] != null
-                      ? Text("\$ " + filteredList[index]["earnings"].toString())
-                      : const Text("\$ 0"),
+                  Text(
+                    filteredList[index]["car_details"] != null
+                        ? filteredList[index]["car_details"]["serviceType"].toString()
+                        : "No service type",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 cMethods.data(
                   1,

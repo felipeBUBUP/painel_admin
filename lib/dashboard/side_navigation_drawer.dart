@@ -45,28 +45,32 @@ class _SideNavigationDrawerState extends State<SideNavigationDrawer> {
   @override
   Widget build(BuildContext context) {
     return AdminScaffold(
-      backgroundColor: const Color.fromRGBO(255, 255, 255, 1),
+      backgroundColor: const Color(0xFFF2F2F2), // Fundo Claro
       appBar: AppBar(
-        backgroundColor: Colors.blue.shade900,
+        backgroundColor: const Color(0xFF4a6e3f), // Verde Escuro
         title: const Text(
           "Painel Administrativo",
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Color(0xFFF2E8D0), // Bege
           ),
         ),
       ),
       sideBar: SideBar(
+        backgroundColor: const Color(0xFF4a6e3f), // Verde Escuro
+        textStyle: const TextStyle(
+          color: Color(0xFFF2E8D0), // Bege
+        ),
         items: const [
           AdminMenuItem(
-            title: "Motoristas",
-            route: DriversPage.id,
-            icon: CupertinoIcons.car_detailed,
-          ),
-          AdminMenuItem(
-            title: "Usuários",
+            title: "Usuário",
             route: UsersPage.id,
             icon: CupertinoIcons.person_2_fill,
+          ),
+          AdminMenuItem(
+            title: "Motorista",
+            route: DriversPage.id,
+            icon: CupertinoIcons.car_detailed,
           ),
           AdminMenuItem(
             title: "Viagens",
@@ -86,20 +90,20 @@ class _SideNavigationDrawerState extends State<SideNavigationDrawer> {
         header: Container(
           height: 52,
           width: double.infinity,
-          color: Colors.blue.shade500,
+          color: const Color(0xFF789e6c), // Verde Suave
           child: const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 Icons.accessibility,
-                color: Colors.white,
+                color: Color(0xFFF2E8D0), // Bege
               ),
               SizedBox(
                 width: 10,
               ),
               Icon(
                 Icons.settings,
-                color: Colors.white,
+                color: Color(0xFFF2E8D0), // Bege
               ),
             ],
           ),
@@ -107,20 +111,20 @@ class _SideNavigationDrawerState extends State<SideNavigationDrawer> {
         footer: Container(
           height: 52,
           width: double.infinity,
-          color: Colors.blue.shade500,
+          color: const Color(0xFF789e6c), // Verde Suave
           child: const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 Icons.admin_panel_settings_outlined,
-                color: Colors.white,
+                color: Color(0xFFF2E8D0), // Bege
               ),
               SizedBox(
                 width: 10,
               ),
               Icon(
                 Icons.computer,
-                color: Colors.white,
+                color: Color(0xFFF2E8D0), // Bege
               ),
             ],
           ),

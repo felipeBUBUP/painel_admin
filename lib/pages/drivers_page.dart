@@ -20,10 +20,7 @@ class _DriversPageState extends State<DriversPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Gerenciar Motoristas"),
-        backgroundColor: const Color(0xFF003319), // Verde Escuro
-      ),
+      backgroundColor: const Color(0xFFF2F2F2), // Fundo Claro
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -49,14 +46,12 @@ class _DriversPageState extends State<DriversPage> {
             ),
             Row(
               children: [
-                cMethods.header(2, "ID MOTORISTA"),
-                cMethods.header(1, "FOTO"),
-                cMethods.header(1, "NOME"),
-                cMethods.header(1, "CARRO"),
-                cMethods.header(1, "TELEFONE"),
-                cMethods.header(1, "GANHOS"),
-                cMethods.header(1, "STATUS"),
-                cMethods.header(1, "DETALHES"),
+                headerWithColor(2, "ID MOTORISTA", const Color(0xFF003319)), // Verde Escuro
+                headerWithColor(1, "NOME", const Color(0xFF003319)), // Verde Escuro
+                headerWithColor(1, "TELEFONE", const Color(0xFF003319)), // Verde Escuro
+                headerWithColor(1, "SERVIÇO", const Color(0xFF003319)), // Verde Escuro
+                headerWithColor(1, "STATUS", const Color(0xFF003319)), // Verde Escuro
+                headerWithColor(1, "DETALHES", const Color(0xFF003319)), // Verde Escuro
               ],
             ),
             const Divider(color: Color(0xFF003319)), // Verde Escuro
@@ -80,7 +75,7 @@ class _DriversPageState extends State<DriversPage> {
       child: Card(
         elevation: 4,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(4), // Menos curvas
         ),
         child: Padding(
           padding: const EdgeInsets.all(8.0),
@@ -102,6 +97,9 @@ class _DriversPageState extends State<DriversPage> {
               ),
               const SizedBox(width: 8),
               ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: const Color(0xFFF2E8D0), backgroundColor: const Color(0xFF003319), // Bege
+                ),
                 onPressed: () {
                   setState(() {
                     searchQuery = "";
@@ -110,11 +108,24 @@ class _DriversPageState extends State<DriversPage> {
                 },
                 icon: const Icon(Icons.clear),
                 label: const Text('Limpar Busca'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget headerWithColor(int flex, String title, Color color) {
+    return Expanded(
+      flex: flex,
+      child: Container(
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: color,
           ),
         ),
       ),
