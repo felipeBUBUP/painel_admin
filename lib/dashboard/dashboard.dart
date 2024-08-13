@@ -10,7 +10,8 @@ class Dashboard extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Image.asset("images/img.png"),
+        Image.asset("images/logo.png", height: 400, width: 600),
+
       ],
     );
   }

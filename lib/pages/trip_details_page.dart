@@ -1,196 +1,150 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_database/firebase_database.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
-import '../methods/common_methods.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class TripDetailsPage extends StatefulWidget {
-  final Map tripData;
+class TripDetailsPage extends StatelessWidget {
+  final Map<String, dynamic> tripData;
 
-  const TripDetailsPage({Key? key, required this.tripData}) : super(key: key);
-
-  @override
-  _TripDetailsPageState createState() => _TripDetailsPageState();
-}
-
-class _TripDetailsPageState extends State<TripDetailsPage> {
-  final DatabaseReference tripRef = FirebaseDatabase.instance.ref().child("agendamentosPendentes");
-  CommonMethods cMethods = CommonMethods();
-
-  void markAsExecuted() {
-    tripRef.child(widget.tripData["key"]).update({
-      "status": "Concluído",
-    }).then((_) {
-      Navigator.pop(context);
-    });
-  }
-
-  void markAsNotExecuted() {
-    tripRef.child(widget.tripData["key"]).update({
-      "status": "Agendado",
-    }).then((_) {
-      Navigator.pop(context);
-    });
-  }
-
-  Widget buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 16),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 2,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> generatePdf() async {
-    final pdf = pw.Document();
-
-    pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                "Detalhes da Viagem",
-                style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
-              ),
-              pw.SizedBox(height: 20),
-              buildPdfRow("ID da Viagem", widget.tripData["key"].toString()),
-              buildPdfRow("ID do Usuário", widget.tripData["userID"].toString()),
-              buildPdfRow("Usuário", widget.tripData["userName"].toString()),
-              buildPdfRow("Telefone do Usuário", widget.tripData["userPhone"].toString()),
-              buildPdfRow("Partida", widget.tripData["pickUpPlaceName"].toString()),
-              buildPdfRow("Destino", widget.tripData["destinationPlaceName"].toString()),
-              buildPdfRow("Data/Hora", widget.tripData["scheduledDateTime"].toString()),
-              buildPdfRow("Tipo de Serviço", widget.tripData["serviceType"].toString()),
-              buildPdfRow("Status", widget.tripData["status"].toString()),
-            ],
-          );
-        },
-      ),
-    );
-
-    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
-  }
-
-  pw.Widget buildPdfRow(String label, String value) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 8.0),
-      child: pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Expanded(
-            flex: 2,
-            child: pw.Text(
-              label,
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16),
-            ),
-          ),
-          pw.Expanded(
-            flex: 3,
-            child: pw.Text(
-              value,
-              style: pw.TextStyle(fontSize: 16),
-              maxLines: 2,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  const TripDetailsPage({super.key, required this.tripData});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Detalhes da Viagem"),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.picture_as_pdf),
-            onPressed: generatePdf,
+        backgroundColor: const Color(0xFF0C1F0E), // Verde Escuro
+        iconTheme: const IconThemeData(color: Color(0xFFF2E8D0)), // Bege para o ícone de voltar
+        titleTextStyle: const TextStyle(
+          color: Color(0xFFF2E8D0), // Bege para o texto do título
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildInfoSection("Informações da Viagem", [
+                _buildInfoTile("ID da Viagem", tripData["tripID"] ?? "N/A"),
+                _buildInfoTile("Nome do Usuário", tripData["userName"] ?? "N/A"),
+                _buildInfoTile("Nome do Motorista", tripData["driverName"] ?? "N/A"),
+                _buildInfoTile("Carro", tripData["carDetails"] ?? "N/A"),
+                _buildInfoTile("Valor da Viagem", "\$${tripData["fareAmount"]?.toStringAsFixed(2) ?? "0.00"}"),
+                _buildInfoTile("Data da Publicação", tripData["publishDateTime"] ?? "N/A"),
+              ]),
+              const SizedBox(height: 20),
+              _buildInfoSection("Pontos de Partida e Destino", [
+                _buildInfoTile("Endereço de Partida", tripData["pickUpPlaceName"] ?? "N/A"),
+                _buildInfoTile("Endereço de Destino", tripData["destinationPlaceName"] ?? "N/A"),
+              ]),
+              const SizedBox(height: 20),
+              _buildActionSection(context),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoSection(String title, List<Widget> children) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(4),
+      ),
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0C1F0E), // Verde Escuro
+              ),
+            ),
+            const Divider(color: Color(0xFF0C1F0E)), // Verde Escuro
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoTile(String title, String subtitle) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 3,
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0C1F0E), // Verde Escuro
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 7,
+            child: Text(
+              subtitle,
+              style: const TextStyle(
+                color: Color(0xFF0C1F0E), // Verde Escuro
+              ),
+            ),
           ),
         ],
       ),
-      body: SingleChildScrollView(
+    );
+  }
+
+  Widget _buildActionSection(BuildContext context) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(4),
+      ),
+      elevation: 4,
+      child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Card(
-              elevation: 5,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    buildDetailRow("ID da Viagem", widget.tripData["key"].toString()),
-                    buildDetailRow("ID do Usuário", widget.tripData["userID"].toString()),
-                    buildDetailRow("Usuário", widget.tripData["userName"].toString()),
-                    buildDetailRow("Telefone do Usuário", widget.tripData["userPhone"].toString()),
-                    buildDetailRow("Partida", widget.tripData["pickUpPlaceName"].toString()),
-                    buildDetailRow("Destino", widget.tripData["destinationPlaceName"].toString()),
-                    buildDetailRow("Data/Hora", widget.tripData["scheduledDateTime"].toString()),
-                    buildDetailRow("Tipo de Serviço", widget.tripData["serviceType"].toString()),
-                    buildDetailRow("Status", widget.tripData["status"].toString()),
-                  ],
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                foregroundColor: const Color(0xFFF2E8D0), backgroundColor: const Color(0xFF0C1F0E), // Bege
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton(
-                  onPressed: widget.tripData["status"] == "Agendado" ? markAsExecuted : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  child: const Text(
-                    "Marcar como Concluída",
-                    style: TextStyle(fontSize: 16),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: widget.tripData["status"] == "Concluído" ? markAsNotExecuted : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  child: const Text(
-                    "Marcar como Não Concluída",
-                    style: TextStyle(fontSize: 16),
-                  ),
-                ),
-              ],
+              onPressed: () {
+                _launchGoogleMap(
+                  tripData["pickUpLatLng"]["latitude"],
+                  tripData["pickUpLatLng"]["longitude"],
+                  tripData["dropOffLatLng"]["latitude"],
+                  tripData["dropOffLatLng"]["longitude"],
+                );
+              },
+              child: const Text("Ver no Google Maps"),
             ),
           ],
         ),
       ),
     );
+  }
+
+  void _launchGoogleMap(String pickUpLat, String pickUpLng, String dropOffLat, String dropOffLng) async {
+    final directionAPIUrl =
+        "https://www.google.com/maps/dir/?api=1&origin=$pickUpLat,$pickUpLng&destination=$dropOffLat,$dropOffLng&dir_action=navigate";
+
+    if (await canLaunch(directionAPIUrl)) {
+      await launch(directionAPIUrl);
+    } else {
+      throw "Não foi possível lançar o Google Maps";
+    }
   }
 }

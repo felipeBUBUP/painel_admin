@@ -17,29 +17,25 @@ class SideNavigationDrawer extends StatefulWidget {
 class _SideNavigationDrawerState extends State<SideNavigationDrawer> {
   Widget chosenScreen = Dashboard();
 
-  sendAdminTo(selectedPage) {
-    switch (selectedPage.route) {
-      case DriversPage.id:
-        setState(() {
+  void sendAdminTo(String route) {
+    setState(() {
+      switch (route) {
+        case DriversPage.id:
           chosenScreen = DriversPage();
-        });
-        break;
-      case UsersPage.id:
-        setState(() {
+          break;
+        case UsersPage.id:
           chosenScreen = UsersPage();
-        });
-        break;
-      case TripsPage.id:
-        setState(() {
+          break;
+        case TripsPage.id:
           chosenScreen = TripsPage();
-        });
-        break;
-      case ScheduledTripsPage.id:
-        setState(() {
+          break;
+        case ScheduledTripsPage.id:
           chosenScreen = ScheduledTripsPage();
-        });
-        break;
-    }
+          break;
+        default:
+          chosenScreen = Dashboard();
+      }
+    });
   }
 
   @override
@@ -61,16 +57,11 @@ class _SideNavigationDrawerState extends State<SideNavigationDrawer> {
         textStyle: const TextStyle(
           color: Color(0xFFF2E8D0), // Bege
         ),
-        items: const [
+        items: [
           AdminMenuItem(
             title: "Usuário",
             route: UsersPage.id,
             icon: CupertinoIcons.person_2_fill,
-          ),
-          AdminMenuItem(
-            title: "Motorista",
-            route: DriversPage.id,
-            icon: CupertinoIcons.car_detailed,
           ),
           AdminMenuItem(
             title: "Viagens",
@@ -82,10 +73,15 @@ class _SideNavigationDrawerState extends State<SideNavigationDrawer> {
             route: ScheduledTripsPage.id,
             icon: CupertinoIcons.calendar,
           ),
+          AdminMenuItem(
+            title: "Motorista",
+            route: DriversPage.id,
+            icon: CupertinoIcons.car_detailed,
+          ),
         ],
         selectedRoute: DriversPage.id,
-        onSelected: (selectedPage) {
-          sendAdminTo(selectedPage);
+        onSelected: (item) {
+          sendAdminTo(item.route ?? '');
         },
         header: Container(
           height: 52,
@@ -98,9 +94,7 @@ class _SideNavigationDrawerState extends State<SideNavigationDrawer> {
                 Icons.accessibility,
                 color: Color(0xFFF2E8D0), // Bege
               ),
-              SizedBox(
-                width: 10,
-              ),
+              SizedBox(width: 10),
               Icon(
                 Icons.settings,
                 color: Color(0xFFF2E8D0), // Bege
@@ -119,9 +113,7 @@ class _SideNavigationDrawerState extends State<SideNavigationDrawer> {
                 Icons.admin_panel_settings_outlined,
                 color: Color(0xFFF2E8D0), // Bege
               ),
-              SizedBox(
-                width: 10,
-              ),
+              SizedBox(width: 10),
               Icon(
                 Icons.computer,
                 color: Color(0xFFF2E8D0), // Bege

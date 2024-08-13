@@ -18,11 +18,14 @@ class _ScheduledTripsPageState extends State<ScheduledTripsPage> {
 
   CommonMethods cMethods = CommonMethods();
 
-  void navigateToTripDetails(Map tripData) {
+  void navigateToTripDetails(Map<dynamic, dynamic> tripData) {
+    // Convertendo o Map<dynamic, dynamic> para Map<String, dynamic>
+    Map<String, dynamic> tripDetails = tripData.map((key, value) => MapEntry(key.toString(), value));
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => TripDetailsPage(tripData: tripData),
+        builder: (context) => TripDetailsPage(tripData: tripDetails),
       ),
     );
   }
@@ -40,13 +43,22 @@ class _ScheduledTripsPageState extends State<ScheduledTripsPage> {
         cMethods.tooltipData(1, item["status"].toString(), item["status"].toString()),
         cMethods.data(
           1,
+
+
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              foregroundColor: const Color(0xFFF2F2F2), backgroundColor: const Color(0xFF003319), // Branco
+              backgroundColor: Colors.white, // Branco
+              foregroundColor: Colors.black, // Texto Preto
             ),
             onPressed: () => navigateToTripDetails(item),
-            child: const Text("+"),
+            child: const Text(
+              "Ver Mais",
+              style: TextStyle(
+                fontWeight: FontWeight.bold, // Texto em negrito
+              ),
+            ),
           ),
+
         ),
       ],
     );
@@ -83,6 +95,7 @@ class _ScheduledTripsPageState extends State<ScheduledTripsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF2F2F2), // Fundo Claro
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(

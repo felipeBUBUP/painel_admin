@@ -140,9 +140,12 @@ class _UsersDataListState extends State<UsersDataList> {
               child: const Text(
                 "Block",
                 style: TextStyle(
-                  color: Colors.black,
+                  color: Colors.black, // Bege
                   fontWeight: FontWeight.bold,
                 ),
+              ),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white, // Verde escuro
               ),
             )
                 : ElevatedButton(
@@ -158,9 +161,12 @@ class _UsersDataListState extends State<UsersDataList> {
               child: const Text(
                 "Approve",
                 style: TextStyle(
-                  color: Colors.black,
+                  color: Colors.black, // Bege
                   fontWeight: FontWeight.bold,
                 ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFFF2E8D0), // Verde escuro
               ),
             ),
           ),

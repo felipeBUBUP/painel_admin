@@ -52,6 +52,7 @@ class _TripsPageState extends State<TripsPage> {
                 headerWithColor(1, "USUÁRIO", const Color(0xFF003319)), // Verde Escuro
                 headerWithColor(1, "MOTORISTA", const Color(0xFF003319)), // Verde Escuro
                 headerWithColor(1, "CARRO", const Color(0xFF003319)), // Verde Escuro
+                headerWithColor(1, "PLACA", const Color(0xFF003319)), // Verde Escuro - Nova Coluna
                 headerWithColor(1, "TEMPO", const Color(0xFF003319)), // Verde Escuro
                 headerWithColor(1, "VALOR", const Color(0xFF003319)), // Verde Escuro
                 headerWithColor(1, "DETALHES", const Color(0xFF003319)), // Verde Escuro
@@ -88,7 +89,7 @@ class _TripsPageState extends State<TripsPage> {
                     child: TextField(
                       controller: searchController,
                       decoration: const InputDecoration(
-                        labelText: 'Search by driver or user',
+                        labelText: 'Buscar por usuário, motorista ou ID viagem',
                         border: OutlineInputBorder(),
                       ),
                       onChanged: (value) {

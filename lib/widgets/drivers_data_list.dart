@@ -169,11 +169,16 @@ class _DriversDataListState extends State<DriversDataList> {
 
   List<Map<String, dynamic>> _applyFilters(List<Map<String, dynamic>> itemsList) {
     return itemsList.where((item) {
-      bool matchesQuery = widget.searchQuery.isEmpty ||
-          (item["name"] != null && item["name"].toString().toLowerCase().contains(widget.searchQuery.toLowerCase())) ||
-          (item["car_details"] != null && item["car_details"]["carModel"] != null && item["car_details"]["carModel"].toString().toLowerCase().contains(widget.searchQuery.toLowerCase())) ||
-          (item["phone"] != null && item["phone"].toString().toLowerCase().contains(widget.searchQuery.toLowerCase()));
-      return matchesQuery;
+      final searchLower = widget.searchQuery.toLowerCase();
+
+      final idMatches = item["key"] != null && item["key"].toString().toLowerCase().contains(searchLower);
+      final nameMatches = item["name"] != null && item["name"].toString().toLowerCase().contains(searchLower);
+      final phoneMatches = item["phone"] != null && item["phone"].toString().toLowerCase().contains(searchLower);
+      final serviceTypeMatches = item["car_details"] != null &&
+          item["car_details"]["serviceType"] != null &&
+          item["car_details"]["serviceType"].toString().toLowerCase().contains(searchLower);
+
+      return idMatches || nameMatches || phoneMatches || serviceTypeMatches;
     }).toList();
   }
 }

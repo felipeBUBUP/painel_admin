@@ -307,7 +307,7 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
             ),
             const SizedBox(height: 10),
             Text(
-              "\$ ${(currentWeekEarnings ?? 0.0).toStringAsFixed(2)}",  // Certifique-se de que `currentWeekEarnings` não seja nulo.
+              "\$ ${(currentWeekEarnings ?? 0.0).toStringAsFixed(2)}", // Certifique-se de que `currentWeekEarnings` não seja nulo.
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 30,
@@ -341,6 +341,10 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
           scrollDirection: Axis.horizontal,
           itemCount: lastFiveWeeksEarnings.length,
           itemBuilder: (context, index) {
+            if (index >= lastFiveWeeksEarnings.length) {
+              return Container(); // Retorna um container vazio se o índice estiver fora do intervalo
+            }
+
             return Container(
               width: 180, // Largura reduzida
               margin: const EdgeInsets.symmetric(horizontal: 5),
@@ -361,7 +365,7 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "Semana ${weekDates[index + 1]}:",
+                      "Semana ${weekDates.length > index + 1 ? weekDates[index + 1] : "N/A"}:",
                       style: const TextStyle(
                         color: Color(0xFFF2E8D0), // Bege
                         fontSize: 14,
@@ -370,7 +374,7 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      "\$${(index < lastFiveWeeksEarnings.length ? lastFiveWeeksEarnings[index] : 0.0).toStringAsFixed(2)}",  // Certifique-se de que o valor seja numérico.
+                      "\$${(lastFiveWeeksEarnings.length > index ? lastFiveWeeksEarnings[index] : 0.0).toStringAsFixed(2)}", // Certifique-se de que o valor seja numérico.
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -440,7 +444,7 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
                 sideTitles: SideTitles(
                   showTitles: true,
                   reservedSize: 80,
-                  interval: 1,  // Adicione esta linha para garantir que o título apareça apenas uma vez por semana
+                  interval: 1, // Adicione esta linha para garantir que o título apareça apenas uma vez por semana
                   getTitlesWidget: (value, meta) {
                     final weekIndex = value.toInt();
                     if (weekIndex >= 0 && weekIndex < 6) {
@@ -490,6 +494,7 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
       ),
     ]);
   }
+
 
 
 

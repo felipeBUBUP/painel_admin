@@ -1,11 +1,14 @@
-import 'package:admin_web_panel/methods/common_methods.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import '../methods/common_methods.dart';
+import '../pages/trip_details_page.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class TripsDataList extends StatefulWidget {
-  const TripsDataList({super.key, required String searchQuery, DateTime? selectedDate});
+  final String searchQuery;
+  final DateTime? selectedDate;
+
+  const TripsDataList({super.key, required this.searchQuery, this.selectedDate});
 
   @override
   State<TripsDataList> createState() => _TripsDataListState();
@@ -14,20 +17,8 @@ class TripsDataList extends StatefulWidget {
 class _TripsDataListState extends State<TripsDataList> {
   final completedTripsRecordsFromDatabase = FirebaseDatabase.instance.ref().child("tripRequests");
   CommonMethods cMethods = CommonMethods();
-  String searchQuery = "";
-  DateTime? selectedDate;
 
   final TextEditingController searchController = TextEditingController();
-
-  launchGoogleMapFromSourceToDestination(pickUpLat, pickUpLng, dropOffLat, dropOffLng) async {
-    String directionAPIUrl = "https://www.google.com/maps/dir/?api=1&origin=$pickUpLat,$pickUpLng&destination=$dropOffLat,$dropOffLng&dir_action=navigate";
-
-    if (await canLaunchUrl(Uri.parse(directionAPIUrl))) {
-      await launchUrl(Uri.parse(directionAPIUrl));
-    } else {
-      throw "Could not launch google map";
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +35,7 @@ class _TripsDataListState extends State<TripsDataList> {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 24,
-                      color: Colors.blueAccent,
+                      color: Colors.redAccent,
                     ),
                   ),
                 );
@@ -63,7 +54,7 @@ class _TripsDataListState extends State<TripsDataList> {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 24,
-                      color: Colors.blueAccent,
+                      color: Colors.redAccent,
                     ),
                   ),
                 );
@@ -76,36 +67,32 @@ class _TripsDataListState extends State<TripsDataList> {
                 itemsList.add({"key": key, ...item});
               });
 
+              // Ordena as viagens por data mais recente primeiro
+              itemsList.sort((a, b) {
+                DateTime dateA = DateTime.tryParse(a["publishDateTime"] ?? "") ?? DateTime(1970);
+                DateTime dateB = DateTime.tryParse(b["publishDateTime"] ?? "") ?? DateTime(1970);
+                return dateB.compareTo(dateA);
+              });
+
               List<Map<String, dynamic>> filteredList = _applyFilters(itemsList);
 
-              Map<String, List<Map<String, dynamic>>> tripsByDate = {};
-              for (var item in filteredList) {
-                String date = item["publishDateTime"].split(" ")[0];
-                if (tripsByDate[date] == null) {
-                  tripsByDate[date] = [];
-                }
-                tripsByDate[date]!.add(item);
+              if (filteredList.isEmpty) {
+                return const Center(
+                  child: Text(
+                    "Nenhuma viagem disponível.",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Colors.redAccent,
+                    ),
+                  ),
+                );
               }
 
               return ListView.builder(
-                itemCount: tripsByDate.keys.length,
+                itemCount: filteredList.length,
                 itemBuilder: (context, index) {
-                  String date = tripsByDate.keys.elementAt(index);
-                  List<Map<String, dynamic>> trips = tripsByDate[date]!;
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Text(
-                          date,
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      ...trips.map((trip) => _buildTripRow(trip)).toList(),
-                    ],
-                  );
+                  return _buildTripRow(filteredList[index]);
                 },
               );
             },
@@ -117,16 +104,20 @@ class _TripsDataListState extends State<TripsDataList> {
 
   List<Map<String, dynamic>> _applyFilters(List<Map<String, dynamic>> itemsList) {
     return itemsList.where((item) {
-      if (selectedDate != null &&
-          !item["publishDateTime"].startsWith(DateFormat('yyyy-MM-dd').format(selectedDate!))) {
-        return false;
-      }
-      if (searchQuery.isNotEmpty &&
-          !item["driverName"].toString().toLowerCase().contains(searchQuery.toLowerCase()) &&
-          !item["userName"].toString().toLowerCase().contains(searchQuery.toLowerCase())) {
-        return false;
-      }
-      return true;
+      bool matchesDate = widget.selectedDate == null ||
+          (item["publishDateTime"] != null &&
+              DateFormat('yyyy-MM-dd').format(DateTime.parse(item["publishDateTime"].split(" ")[0])) ==
+                  DateFormat('yyyy-MM-dd').format(widget.selectedDate!));
+
+      bool matchesQuery = widget.searchQuery.isEmpty ||
+          (item["tripID"] != null &&
+              item["tripID"].toString().toLowerCase().contains(widget.searchQuery.toLowerCase())) ||
+          (item["driverName"] != null &&
+              item["driverName"].toString().toLowerCase().contains(widget.searchQuery.toLowerCase())) ||
+          (item["userName"] != null &&
+              item["userName"].toString().toLowerCase().contains(widget.searchQuery.toLowerCase()));
+
+      return matchesDate && matchesQuery;
     }).toList();
   }
 
@@ -136,34 +127,32 @@ class _TripsDataListState extends State<TripsDataList> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          cMethods.data(2, Text(trip["tripID"].toString())),
-          cMethods.data(1, Text(trip["userName"].toString())),
-          cMethods.data(1, Text(trip["driverName"].toString())),
-          cMethods.data(1, Text(trip["carDetails"].toString())),
-          cMethods.data(1, Text(trip["publishDateTime"].toString())),
-          cMethods.data(1, Text("\$ " + trip["fareAmount"].toString())),
+          cMethods.data(2, Text(trip["tripID"]?.toString() ?? "N/A")),
+          cMethods.data(1, Text(trip["userName"]?.toString() ?? "N/A")),
+          cMethods.data(1, Text(trip["driverName"]?.toString() ?? "N/A")),
+          cMethods.data(1, Text(trip["carDetails"]?.toString() ?? "N/A")),
+          cMethods.data(1, Text(trip["publishDateTime"]?.toString() ?? "N/A")),
+          cMethods.data(1, Text("\$ " + (trip["fareAmount"]?.toString() ?? "0.00"))),
           cMethods.data(
             1,
             ElevatedButton(
               onPressed: () {
-                String pickUpLat = trip["pickUpLatLng"]["latitude"];
-                String pickUpLng = trip["pickUpLatLng"]["longitude"];
-                String dropOffLat = trip["dropOffLatLng"]["latitude"];
-                String dropOffLng = trip["dropOffLatLng"]["longitude"];
-
-                launchGoogleMapFromSourceToDestination(
-                  pickUpLat,
-                  pickUpLng,
-                  dropOffLat,
-                  dropOffLng,
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TripDetailsPage(tripData: trip),
+                  ),
                 );
               },
               child: const Text(
-                "View More",
+                "Ver Mais",
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Colors.black,
                   fontWeight: FontWeight.bold,
                 ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white, // Bege
               ),
             ),
           ),
