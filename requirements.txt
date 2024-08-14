@@ -1,0 +1,10 @@
+flutter_admin_scaffold
+firebase_core
+firebase_database
+url_launcher
+pdf
+printing
+firebase_storage
+path_provider
+intl
+fl_chart
