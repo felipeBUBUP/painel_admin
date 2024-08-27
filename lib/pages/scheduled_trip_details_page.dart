@@ -1,28 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class TripDetailsPage extends StatelessWidget {
+class ScheduledTripDetailsPage extends StatefulWidget {
   final Map<String, dynamic> tripData;
+  final String tripID;
 
-  const TripDetailsPage({super.key, required this.tripData});
+  const ScheduledTripDetailsPage({super.key, required this.tripData, required this.tripID});
+
+  @override
+  _ScheduledTripDetailsPageState createState() => _ScheduledTripDetailsPageState();
+}
+
+class _ScheduledTripDetailsPageState extends State<ScheduledTripDetailsPage> {
+  late Map<String, dynamic> tripData;
+  final DatabaseReference tripsRef = FirebaseDatabase.instance.ref().child("agendamentosPendentes");
+
+  @override
+  void initState() {
+    super.initState();
+    tripData = widget.tripData;
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Verificando se os campos de coordenadas estão presentes
-    final pickUpLatLng = tripData["pickUpLatLng"] ?? {};
-    final dropOffLatLng = tripData["dropOffLatLng"] ?? {};
-
-    final pickUpLatitude = pickUpLatLng["latitude"];
-    final pickUpLongitude = pickUpLatLng["longitude"];
-    final dropOffLatitude = dropOffLatLng["latitude"];
-    final dropOffLongitude = dropOffLatLng["longitude"];
-
-    print("Endereço de Partida: ${tripData["pickUpAddress"]}");
-    print("Endereço de Destino: ${tripData["dropOffAddress"]}");
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Detalhes da Viagem"),
+        title: const Text("Detalhes da Viagem Agendada"),
         backgroundColor: const Color(0xFF0C1F0E), // Verde Escuro
         iconTheme: const IconThemeData(color: Color(0xFFF2E8D0)), // Bege para o ícone de voltar
         titleTextStyle: const TextStyle(
@@ -38,36 +42,22 @@ class TripDetailsPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildInfoSection("Informações da Viagem", [
-                _buildInfoTile("ID da Viagem", tripData["tripID"] ?? "N/A"),
                 _buildInfoTile("Nome do Usuário", tripData["userName"] ?? "N/A"),
-                _buildInfoTile("Nome do Motorista", tripData["driverName"] ?? "N/A"),
-                _buildInfoTile("Carro", tripData["carDetails"] ?? "N/A"),
-                _buildInfoTile("Valor da Viagem", _formatFareAmount(tripData["fareAmount"])),
-                _buildInfoTile("Data da Publicação", tripData["publishDateTime"] ?? "N/A"),
+                _buildInfoTile("Email do Usuário", tripData["userEmail"] ?? "N/A"),
+                _buildInfoTile("Telefone do Usuário", tripData["userPhone"] ?? "N/A"),
+                _buildInfoTile("Data e Horário da Viagem", tripData["scheduledDateTime"] ?? "N/A"),
+                _buildInfoTile("Ponto de Partida", tripData["pickUpPlaceName"] ?? "N/A"),
+                _buildInfoTile("Ponto de Destino", tripData["destinationPlaceName"] ?? "N/A"),
+                _buildInfoTile("Tipo de Serviço", tripData["serviceType"] ?? "N/A"),
+                _buildInfoTile("Status", tripData["status"] ?? "N/A"),
               ]),
               const SizedBox(height: 20),
-              _buildInfoSection("Pontos de Partida e Destino", [
-                _buildInfoTile("Endereço de Partida", tripData["pickUpAddress"] ?? "N/A"),
-                _buildInfoTile("Endereço de Destino", tripData["dropOffAddress"] ?? "N/A"),
-              ]),
-              const SizedBox(height: 20),
-              _buildActionSection(context, pickUpLatitude, pickUpLongitude, dropOffLatitude, dropOffLongitude),
+              _buildActionSection(context),
             ],
           ),
         ),
       ),
     );
-  }
-
-  String _formatFareAmount(dynamic fareAmount) {
-    if (fareAmount is num) {
-      return "\$${fareAmount.toStringAsFixed(2)}";
-    } else if (fareAmount is String) {
-      final parsedAmount = double.tryParse(fareAmount);
-      return parsedAmount != null ? "\$${parsedAmount.toStringAsFixed(2)}" : "\$0.00";
-    } else {
-      return "\$0.00";
-    }
   }
 
   Widget _buildInfoSection(String title, List<Widget> children) {
@@ -126,7 +116,7 @@ class TripDetailsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildActionSection(BuildContext context, String? pickUpLat, String? pickUpLng, String? dropOffLat, String? dropOffLng) {
+  Widget _buildActionSection(BuildContext context) {
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(4),
@@ -145,15 +135,30 @@ class TripDetailsPage extends StatelessWidget {
                 ),
               ),
               onPressed: () {
-                if (pickUpLat != null && pickUpLng != null && dropOffLat != null && dropOffLng != null) {
-                  _launchGoogleMap(context, pickUpLat, pickUpLng, dropOffLat, dropOffLng);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Coordenadas não disponíveis para esta viagem.")),
-                  );
-                }
+                _launchGoogleMap(
+                  tripData["pickUpLatLng"]["latitude"],
+                  tripData["pickUpLatLng"]["longitude"],
+                  tripData["dropOffLatLng"]["latitude"],
+                  tripData["dropOffLatLng"]["longitude"],
+                  context,
+                );
               },
               child: const Text("Ver no Google Maps"),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: tripData["status"] == "Concluído" ? Colors.green : Colors.red, // Verde para Concluído, Vermelho para Não Concluído
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              onPressed: () => _toggleTripStatus(context),
+              child: Text(
+                tripData["status"] == "Concluído" ? "Concluído" : "Marcar como Concluído",
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
@@ -161,7 +166,26 @@ class TripDetailsPage extends StatelessWidget {
     );
   }
 
-  void _launchGoogleMap(BuildContext context, String pickUpLat, String pickUpLng, String dropOffLat, String dropOffLng) async {
+  void _toggleTripStatus(BuildContext context) {
+    final newStatus = tripData["status"] == "Concluído" ? "Agendado" : "Concluído";
+
+    // Atualizando apenas o campo "status" da viagem no Firebase
+    tripsRef.child(widget.tripID).update({"status": newStatus}).then((_) {
+      setState(() {
+        tripData["status"] = newStatus;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Status alterado para: $newStatus")),
+      );
+    }).catchError((error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erro ao atualizar o status: $error")),
+      );
+    });
+  }
+
+  void _launchGoogleMap(String pickUpLat, String pickUpLng, String dropOffLat, String dropOffLng, BuildContext context) async {
     final directionAPIUrl =
         "https://www.google.com/maps/dir/?api=1&origin=$pickUpLat,$pickUpLng&destination=$dropOffLat,$dropOffLng&dir_action=navigate";
 

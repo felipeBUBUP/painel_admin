@@ -59,6 +59,11 @@ class _SideNavigationDrawerState extends State<SideNavigationDrawer> {
         ),
         items: [
           AdminMenuItem(
+            title: "Motorista",
+            route: DriversPage.id,
+            icon: CupertinoIcons.car_detailed,
+          ),
+          AdminMenuItem(
             title: "Usuário",
             route: UsersPage.id,
             icon: CupertinoIcons.person_2_fill,
@@ -72,11 +77,6 @@ class _SideNavigationDrawerState extends State<SideNavigationDrawer> {
             title: "Agendamentos",
             route: ScheduledTripsPage.id,
             icon: CupertinoIcons.calendar,
-          ),
-          AdminMenuItem(
-            title: "Motorista",
-            route: DriversPage.id,
-            icon: CupertinoIcons.car_detailed,
           ),
         ],
         selectedRoute: DriversPage.id,

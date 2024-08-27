@@ -29,7 +29,7 @@ class _DriversDataListState extends State<DriversDataList> {
         if (snapshotData.hasError) {
           return const Center(
             child: Text(
-              "Error Occurred. Try Later.",
+              "Ocorreu um erro. Tente novamente mais tarde.",
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 24,
@@ -47,12 +47,13 @@ class _DriversDataListState extends State<DriversDataList> {
 
         if (!snapshotData.hasData || !snapshotData.data!.snapshot.exists) {
           return const Center(
-            child: Text("No data found"),
+            child: Text("Nenhum dado encontrado"),
           );
         }
 
         Map<dynamic, dynamic> dataMap = snapshotData.data!.snapshot.value as Map<dynamic, dynamic>;
         List<Map<String, dynamic>> itemsList = [];
+
         dataMap.forEach((key, value) {
           Map<String, dynamic> item = Map<String, dynamic>.from(value);
           itemsList.add({"key": key, ...item});
@@ -60,36 +61,48 @@ class _DriversDataListState extends State<DriversDataList> {
 
         List<Map<String, dynamic>> filteredList = _applyFilters(itemsList);
 
+        if (filteredList.isEmpty) {
+          return const Center(
+            child: Text("Nenhum dado correspondente encontrado"),
+          );
+        }
+
         return ListView.builder(
           shrinkWrap: true,
           itemCount: filteredList.length,
-          itemBuilder: ((context, index) {
+          itemBuilder: (context, index) {
             return Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 cMethods.data(
                   2,
-                  Text(filteredList[index]["id"].toString(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                  Text(
+                    filteredList[index]["cpf"]?.toString() ?? "",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 cMethods.data(
                   1,
-                  Text(filteredList[index]["name"].toString(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                  Text(
+                    filteredList[index]["name"]?.toString() ?? "",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 cMethods.data(
                   1,
-                  Text(filteredList[index]["phone"].toString(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                  Text(
+                    filteredList[index]["phone"]?.toString() ?? "",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 cMethods.data(
                   1,
                   Text(
                     filteredList[index]["car_details"] != null
-                        ? filteredList[index]["car_details"]["serviceType"].toString()
+                        ? filteredList[index]["car_details"]["serviceType"]?.toString() ?? "No service type"
                         : "No service type",
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -103,7 +116,7 @@ class _DriversDataListState extends State<DriversDataList> {
                       await FirebaseDatabase.instance
                           .ref()
                           .child("drivers")
-                          .child(filteredList[index]["id"])
+                          .child(filteredList[index]["key"])
                           .update(
                         {
                           "blockStatus": "yes",
@@ -123,7 +136,7 @@ class _DriversDataListState extends State<DriversDataList> {
                       await FirebaseDatabase.instance
                           .ref()
                           .child("drivers")
-                          .child(filteredList[index]["id"])
+                          .child(filteredList[index]["key"])
                           .update(
                         {
                           "blockStatus": "no",
@@ -146,7 +159,7 @@ class _DriversDataListState extends State<DriversDataList> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => DriverDetailsPage(driverId: filteredList[index]["id"]),
+                          builder: (context) => DriverDetailsPage(driverId: filteredList[index]["key"]),
                         ),
                       );
                     },
@@ -161,7 +174,7 @@ class _DriversDataListState extends State<DriversDataList> {
                 ),
               ],
             );
-          }),
+          },
         );
       },
     );
@@ -171,14 +184,216 @@ class _DriversDataListState extends State<DriversDataList> {
     return itemsList.where((item) {
       final searchLower = widget.searchQuery.toLowerCase();
 
-      final idMatches = item["key"] != null && item["key"].toString().toLowerCase().contains(searchLower);
+      final cpfMatches = item["cpf"] != null && item["cpf"].toString().toLowerCase().contains(searchLower);
       final nameMatches = item["name"] != null && item["name"].toString().toLowerCase().contains(searchLower);
-      final phoneMatches = item["phone"] != null && item["phone"].toString().toLowerCase().contains(searchLower);
       final serviceTypeMatches = item["car_details"] != null &&
           item["car_details"]["serviceType"] != null &&
           item["car_details"]["serviceType"].toString().toLowerCase().contains(searchLower);
 
-      return idMatches || nameMatches || phoneMatches || serviceTypeMatches;
+      return cpfMatches || nameMatches || serviceTypeMatches;
     }).toList();
+  }
+
+  Future<Map<String, double>> getDriverEarningsWithLogs(String driverCpf) async {
+    print("Fetching earnings for driver CPF: $driverCpf");
+    DatabaseReference earningsRef = FirebaseDatabase.instance
+        .ref()
+        .child("drivers")
+        .child(driverCpf)
+        .child("earnings");
+
+    DataSnapshot snapshot = await earningsRef.get();
+
+    if (snapshot.exists) {
+      print("Earnings data found: ${snapshot.value}");
+
+      Map<String, dynamic> earningsData = Map<String, dynamic>.from(snapshot.value as Map);
+      DateTime now = DateTime.now();
+      DateTime currentWeekStart = now.subtract(Duration(days: now.weekday - 1));
+      DateTime sixWeeksAgo = currentWeekStart.subtract(Duration(days: 42)); // Considerando 6 semanas anteriores
+
+      print("Current week start: $currentWeekStart");
+      print("Date six weeks ago: $sixWeeksAgo");
+
+      Map<int, double> weeklyEarnings = {
+        for (var i = 0; i < 6; i++) i: 0.0,
+      };
+
+      earningsData.forEach((key, value) {
+        double? amount = value['amount'] != null ? double.tryParse(value['amount'].toString()) : null;
+        DateTime? earningDate = value['timestamp'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(int.tryParse(value['timestamp'].toString()) ?? 0)
+            : null;
+
+        if (amount != null && earningDate != null) {
+          print("Processing earning: $amount on date: $earningDate");
+
+          if (earningDate.isAfter(sixWeeksAgo)) {
+            int weekNumber = ((currentWeekStart.difference(earningDate).inDays) / 7).floor();
+
+            if (weekNumber >= 0 && weekNumber < 6) {
+              weeklyEarnings[weekNumber] =
+                  (weeklyEarnings[weekNumber] ?? 0.0) + amount;
+              print("Week $weekNumber earnings updated to: ${weeklyEarnings[weekNumber]}");
+            } else {
+              print("Earning ignored, out of range.");
+            }
+          } else {
+            print("Earning ignored, too old.");
+          }
+        } else {
+          print("Invalid earning data: amount=$amount, date=$earningDate");
+        }
+      });
+
+      print("Final weekly earnings: $weeklyEarnings");
+
+      Map<String, double> earningsDisplayData = {};
+      for (var i = 0; i < 5; i++) {
+        DateTime weekStart = currentWeekStart.subtract(Duration(days: i * 7));
+        DateTime weekEnd = weekStart.add(const Duration(days: 6));
+        String weekRange = "${weekStart.day}/${weekStart.month} - ${weekEnd.day}/${weekEnd.month}";
+        earningsDisplayData[weekRange] = weeklyEarnings[i] ?? 0.0;
+      }
+
+      print("Earnings for display: $earningsDisplayData");
+
+      return earningsDisplayData;
+    } else {
+      print("No earnings data found for driver CPF: $driverCpf");
+    }
+
+    return {};
+  }
+}
+
+class DriversPage extends StatefulWidget {
+  static const String id = "\webPageDrivers";
+
+  const DriversPage({super.key});
+
+  @override
+  State<DriversPage> createState() => _DriversPageState();
+}
+
+class _DriversPageState extends State<DriversPage> {
+  CommonMethods cMethods = CommonMethods();
+  String searchQuery = "";
+
+  final TextEditingController searchController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF2F2F2), // Fundo Claro
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              alignment: Alignment.topLeft,
+              child: const Text(
+                "Gerenciar Motoristas",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF003319), // Verde Escuro
+                ),
+              ),
+            ),
+            const SizedBox(
+              height: 18,
+            ),
+            _buildSearchField(),
+            const SizedBox(
+              height: 18,
+            ),
+            Row(
+              children: [
+                headerWithColor(2, "CPF MOTORISTA", const Color(0xFF003319)), // Verde Escuro
+                headerWithColor(1, "NOME", const Color(0xFF003319)), // Verde Escuro
+                headerWithColor(1, "TELEFONE", const Color(0xFF003319)), // Verde Escuro
+                headerWithColor(1, "SERVIÇO", const Color(0xFF003319)), // Verde Escuro
+                headerWithColor(1, "STATUS", const Color(0xFF003319)), // Verde Escuro
+                headerWithColor(1, "DETALHES", const Color(0xFF003319)), // Verde Escuro
+              ],
+            ),
+            const Divider(color: Color(0xFF003319)), // Verde Escuro
+            Expanded(
+              child: DriversDataList(
+                searchQuery: searchQuery,
+                onMoreInfoTap: (String driverCpf) {
+                  // Handle more info tap
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchField() {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4), // Menos curvas
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: searchController,
+                  decoration: const InputDecoration(
+                    labelText: 'Buscar por nome ou CPF',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      searchQuery = value;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: const Color(0xFFF2E8D0), backgroundColor: const Color(0xFF003319), // Bege
+                ),
+                onPressed: () {
+                  setState(() {
+                    searchQuery = "";
+                    searchController.clear();
+                  });
+                },
+                icon: const Icon(Icons.clear),
+                label: const Text('Limpar Busca'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget headerWithColor(int flex, String title, Color color) {
+    return Expanded(
+      flex: flex,
+      child: Container(
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -51,6 +51,7 @@ class _UsersPageState extends State<UsersPage> {
                 headerWithColor(1, "NOME", const Color(0xFF003319)), // Verde Escuro
                 headerWithColor(1, "EMAIL", const Color(0xFF003319)), // Verde Escuro
                 headerWithColor(1, "TELEFONE", const Color(0xFF003319)), // Verde Escuro
+                headerWithColor(1, "CPF", const Color(0xFF003319)), // Verde Escuro
                 headerWithColor(1, "STATUS", const Color(0xFF003319)), // Verde Escuro
               ],
             ),
@@ -82,7 +83,7 @@ class _UsersPageState extends State<UsersPage> {
                 child: TextField(
                   controller: searchController,
                   decoration: const InputDecoration(
-                    labelText: 'Search by name, email, or phone',
+                    labelText: 'Buscar pro ID, CPF ou nome do usuário',
                     border: OutlineInputBorder(),
                   ),
                   onChanged: (value) {

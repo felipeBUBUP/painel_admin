@@ -85,7 +85,7 @@ class _DriversPageState extends State<DriversPage> {
                 child: TextField(
                   controller: searchController,
                   decoration: const InputDecoration(
-                    labelText: 'Buscar por nome, modelo do carro ou telefone',
+                    labelText: 'Buscar por ID, CPF ou nome do motorista',
                     border: OutlineInputBorder(),
                   ),
                   onChanged: (value) {

@@ -31,7 +31,7 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
   getRecentTrips() async {
     DatabaseReference tripsRef = FirebaseDatabase.instance.ref().child("tripRequests");
 
-    tripsRef.orderByChild("date").limitToLast(5).onValue.listen((event) {
+    tripsRef.orderByChild("driverID").equalTo(widget.driverId).limitToLast(5).onValue.listen((event) {
       if (event.snapshot.value != null) {
         Map tripsMap = event.snapshot.value as Map;
         List<Map<String, dynamic>> tripsList = [];
@@ -93,6 +93,7 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
                     _buildInfoTile("Nome", driverData["name"] ?? "N/A"),
                     _buildInfoTile("Email", driverData["email"] ?? "N/A"),
                     _buildInfoTile("Telefone", driverData["phone"] ?? "N/A"),
+                    _buildInfoTile("CPF/Passaporte", driverData["cpf"] ?? driverData["passport"] ?? "N/A"),
                     if (driverData["photo"] != null)
                       _buildPhotoDownloadTile("Foto do Motorista", driverData["photo"]),
                   ]),
@@ -112,6 +113,8 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
                   _buildInfoSection("Fotos", _buildPhotoWidgets(driverData['car_details'])),
                   const SizedBox(height: 20),
                   _buildInfoSection("Documentos", _buildDocumentWidgets(driverData)),
+                  const SizedBox(height: 20),
+                  _buildBankDetails(driverData),
                   const SizedBox(height: 20),
                   Center(
                     child: ElevatedButton(
@@ -252,16 +255,27 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
 
             if (weekNumber >= 0 && weekNumber < 6) {
               weeklyEarnings[weekNumber] = (weeklyEarnings[weekNumber] ?? 0.0) + amount;
-              print("Processing earning: date=$earningDate, amount=$amount, weekNumber=$weekNumber");
+              print("Semana $weekNumber: ${weeklyEarnings[weekNumber]}");
             } else {
-              print("Earning out of range: date=$earningDate, amount=$amount, weekNumber=$weekNumber");
+              print("Earning fora do intervalo: $amount em $earningDate");
             }
+          } else {
+            print("Dados de ganho inválidos: amount=$amount, date=$earningDate");
           }
         });
 
+        print("Ganhos semanais finais: $weeklyEarnings");
+
         setState(() {
-          currentWeekEarnings = weeklyEarnings[0] ?? 0.0;
+          // O valor da semana 5 (última semana) será usado como o valor atual
+          currentWeekEarnings = weeklyEarnings[5] ?? 0.0;
           lastFiveWeeksEarnings = List.generate(5, (index) => weeklyEarnings[index + 1] ?? 0.0);
+
+          // Substituir o valor da última semana na lista das últimas 5 semanas pelo valor da semana mais recente
+          if (lastFiveWeeksEarnings.isNotEmpty) {
+            lastFiveWeeksEarnings[4] = currentWeekEarnings;
+          }
+
           weekDates = List.generate(6, (index) {
             DateTime weekStart = referenceDate.add(Duration(days: index * 7));
             DateTime weekEnd = weekStart.add(Duration(days: 6));
@@ -272,12 +286,11 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
             return FlSpot(index.toDouble(), weeklyEarnings[index] ?? 0.0);
           });
         });
+      } else {
+        print("Nenhum dado de ganho encontrado para o motorista.");
       }
     });
   }
-
-
-
 
 
   Widget _buildEarningsDashboard() {
@@ -495,9 +508,6 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
     ]);
   }
 
-
-
-
   Widget _buildRecentTrips() {
     return _buildInfoSection("Histórico de Viagens", [
       Container(
@@ -641,6 +651,31 @@ class _DriverDetailsPageState extends State<DriverDetailsPage> {
       });
     }
     return documentWidgets;
+  }
+
+  Widget _buildBankDetails(Map<dynamic, dynamic> driverData) {
+    if (driverData.containsKey('payment_info')) {
+      Map<dynamic, dynamic> bankDetails = driverData['payment_info'];
+      return _buildInfoSection("Informações Bancárias", [
+        _buildInfoTile("CPF", bankDetails["cpf"] ?? "N/A"),
+        _buildInfoTile("Chave Pix", bankDetails["pixKey"] ?? "N/A"),
+        _buildInfoTile("Banco", bankDetails["bankName"] ?? "N/A"),
+        _buildInfoTile("Agência", bankDetails["bankAgency"] ?? "N/A"),
+        _buildInfoTile("Conta", bankDetails["bankAccountNumber"] ?? "N/A"),
+      ]);
+    } else {
+      return _buildInfoSection("Informações Bancárias", [
+        const Center(
+          child: Text(
+            "Nenhuma informação bancária disponível.",
+            style: TextStyle(
+              color: Color(0xFF0C1F0E), // Verde Escuro
+              fontSize: 14,
+            ),
+          ),
+        ),
+      ]);
+    }
   }
 
   void _launchURL(String url) async {

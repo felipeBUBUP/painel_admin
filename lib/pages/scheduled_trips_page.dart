@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:admin_web_panel/methods/common_methods.dart';
-import 'trip_details_page.dart';
+import '../methods/common_methods.dart';
+import 'scheduled_trip_details_page.dart';
 
 class ScheduledTripsPage extends StatefulWidget {
   static const String id = "\webPageScheduledTrips";
@@ -18,14 +18,20 @@ class _ScheduledTripsPageState extends State<ScheduledTripsPage> {
 
   CommonMethods cMethods = CommonMethods();
 
-  void navigateToTripDetails(Map<dynamic, dynamic> tripData) {
+  void navigateToScheduledTripDetails(Map<dynamic, dynamic> tripData) {
     // Convertendo o Map<dynamic, dynamic> para Map<String, dynamic>
     Map<String, dynamic> tripDetails = tripData.map((key, value) => MapEntry(key.toString(), value));
+
+    // Puxando o tripID do item e passando para a nova página
+    String tripID = tripDetails['key'];
 
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => TripDetailsPage(tripData: tripDetails),
+        builder: (context) => ScheduledTripDetailsPage(
+          tripData: tripDetails,
+          tripID: tripID,
+        ),
       ),
     );
   }
@@ -43,14 +49,12 @@ class _ScheduledTripsPageState extends State<ScheduledTripsPage> {
         cMethods.tooltipData(1, item["status"].toString(), item["status"].toString()),
         cMethods.data(
           1,
-
-
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white, // Branco
               foregroundColor: Colors.black, // Texto Preto
             ),
-            onPressed: () => navigateToTripDetails(item),
+            onPressed: () => navigateToScheduledTripDetails(item), // Altere para a nova função
             child: const Text(
               "Ver Mais",
               style: TextStyle(
@@ -58,7 +62,6 @@ class _ScheduledTripsPageState extends State<ScheduledTripsPage> {
               ),
             ),
           ),
-
         ),
       ],
     );

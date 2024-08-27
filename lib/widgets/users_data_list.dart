@@ -76,13 +76,15 @@ class _UsersDataListState extends State<UsersDataList> {
 
   List<Map<String, dynamic>> _applyFilters(List<Map<String, dynamic>> itemsList) {
     return itemsList.where((item) {
-      if (widget.searchQuery.isNotEmpty &&
-          !item["name"].toString().toLowerCase().contains(widget.searchQuery.toLowerCase()) &&
-          !item["email"].toString().toLowerCase().contains(widget.searchQuery.toLowerCase()) &&
-          !item["phone"].toString().toLowerCase().contains(widget.searchQuery.toLowerCase())) {
-        return false;
-      }
-      return true;
+      final searchLower = widget.searchQuery.toLowerCase();
+
+      final idMatches = item["key"] != null && item["key"].toString().toLowerCase().contains(searchLower);
+      final nameMatches = item["name"] != null && item["name"].toString().toLowerCase().contains(searchLower);
+      final emailMatches = item["email"] != null && item["email"].toString().toLowerCase().contains(searchLower);
+      final phoneMatches = item["phone"] != null && item["phone"].toString().toLowerCase().contains(searchLower);
+      final cpfMatches = item["cpf"] != null && item["cpf"].toString().toLowerCase().contains(searchLower);
+
+      return idMatches || nameMatches || emailMatches || phoneMatches || cpfMatches;
     }).toList();
   }
 
@@ -126,6 +128,14 @@ class _UsersDataListState extends State<UsersDataList> {
           ),
           cMethods.data(
             1,
+            Text(
+              user["cpf"]?.toString() ?? "N/A", // Exibe o CPF ou "N/A" se não estiver disponível
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          cMethods.data(
+            1,
             user["blockStatus"] == "no"
                 ? ElevatedButton(
               onPressed: () async {
@@ -145,7 +155,7 @@ class _UsersDataListState extends State<UsersDataList> {
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white, // Verde escuro
+                backgroundColor: Colors.white, // Verde escuro
               ),
             )
                 : ElevatedButton(
